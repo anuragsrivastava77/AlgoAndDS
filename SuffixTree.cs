@@ -13,14 +13,30 @@ namespace test3
             int tc = Convert.ToInt32(input);
             for (int t = 1; t <= tc; t++)
             {
-                string str = Console.ReadLine().Trim();
+                string str1 = Console.ReadLine().Trim();
+                //   string str2 = Console.ReadLine().Trim();
 
-                SuffixTree suffixTree = new SuffixTree();
-                suffixTree.BuildSuffixTree(str);
+                  SuffixTree suffixTree = new SuffixTree();
 
-                string ans = suffixTree.LongestRepeatedSubstring();
+                input = str1; //+ "#" + str2;
+                suffixTree.BuildSuffixTree(input);
 
-                Console.WriteLine(ans);
+                var leaves = suffixTree.DFSToPopulateStartIndexAtLeaves();
+
+                foreach (var leaf in leaves)
+                {
+                    for (int i = leaf.index; i < leaf.end.endIndex; i++)
+                    {
+                        Console.Write(input[i]);
+                    }
+                    Console.WriteLine("$ " + leaf.index);
+                }
+
+                Console.WriteLine("Toal leaves Count: " + (str1.Length + 1)+" | Leaves Printed: "+leaves.Count);
+
+                string ans = suffixTree.LongestCommonSubstring(str1.Length);
+
+                Console.WriteLine("Longest Common Substring in xabxac and abcabxabcd is: "+ans);
             }
         }
     }
@@ -38,15 +54,14 @@ namespace test3
         {
             this.str = inputStr + '$';
 
-            root = new SuffixNode(-1, null, -1, null);
+            this.root = new SuffixNode(-1, null, -1, this.root);
 
             remSuffix = 0;
             globalEnd = new End(-1);
-            active = new ActivePoint(root, -1, 0);
+            active = new ActivePoint(this.root, -1, 0);
 
             for (int i = 0; i < str.Length; i++)
             {
-
                 this.StartPhase(i);
             }
         }
@@ -61,7 +76,7 @@ namespace test3
             {
                 int ch = (int)this.str[index];                                                            // ascii of next character in input to compare.
 
-                if (active.activeLength == 0)                                                        // No Need to traverse edge. Check directly on active node.
+                if (active.activeLength == 0)                                                        // active node will be Root if Aactive length is 0.No Need to traverse edge. Check directly on active node. 
                 {
                     if (active.activeNode.child[ch] == null)                                         // If edge in current char direction doesn't exists.
                     {
@@ -80,7 +95,12 @@ namespace test3
                 }
                 else
                 {
-                    char nextChInTree = nextCharInTree();
+                    char nextChInTree = nextCharInTree(index);
+
+                    if(nextChInTree=='$') // i.e only a single leaf node is created.
+                    {
+                        continue;  // As Rule 2 extension happened.
+                    }
 
                     SuffixNode activeEdgeNode = active.activeNode.child[this.str[active.activeEdge]];          // current edge in the direction of current char.                                  
 
@@ -110,13 +130,13 @@ namespace test3
                             activeEdgeNode.startIndex,
                             new End(activeEdgeNode.startIndex + active.activeLength - 1),
                             -1,
-                            root);
+                            this.root);
 
                         SuffixNode newLeafNode = new SuffixNode(
                            index,
                            globalEnd,
                            -1,
-                           root);
+                           this.root);
 
                         activeEdgeNode.startIndex = activeEdgeNode.startIndex + active.activeLength;
 
@@ -128,7 +148,7 @@ namespace test3
                         --remSuffix;
 
 
-                        if (active.activeNode != root)
+                        if (active.activeNode != this.root)
                         {
                             active.activeNode = active.activeNode.suffixLink;
                         }
@@ -151,37 +171,57 @@ namespace test3
             }
         }
 
-        private char nextCharInTree()
+        private char nextCharInTree(int index)
         {
-
-            SuffixNode activeEdgeNode = active.activeNode.child[this.str[active.activeEdge]];          // current edge in the direction of current char.                                  
+            SuffixNode activeEdgeNode = this.active.activeNode.child[this.str[this.active.activeEdge]];          // current edge in the direction of current char.                                  
 
             int activeEdgeLength = (activeEdgeNode.end.endIndex - activeEdgeNode.startIndex) + 1;
-            if (activeEdgeLength > active.activeLength)
+            if (activeEdgeLength > this.active.activeLength)
             {
 
-                return this.str[activeEdgeNode.startIndex + active.activeLength];
+                return this.str[activeEdgeNode.startIndex + this.active.activeLength];
+            }
+            else if (activeEdgeLength == this.active.activeLength)
+            {
+                if (activeEdgeNode.child[this.str[index]] != null)
+                {
+                    return this.str[index];
+                }
+                else
+                {
+                    activeEdgeNode.child[this.str[index]] = new SuffixNode(index, this.globalEnd, -1, this.root); // Rule 2 extension happens.
+
+                    if (active.activeNode != this.root)
+                    {
+                        this.active.activeNode = this.active.activeNode.suffixLink;
+                    }
+                    this.active.activeEdge++;
+                    this.active.activeLength--;
+                    this.remSuffix--;
+                    return '$';
+
+                }
             }
             else
             {
-                active.activeNode = activeEdgeNode;
-                active.activeLength = active.activeLength - activeEdgeLength;
-                active.activeEdge = active.activeEdge + activeEdgeLength;
-                return nextCharInTree();
+                this.active.activeNode = activeEdgeNode;
+                this.active.activeLength = this.active.activeLength - activeEdgeLength;
+                this.active.activeEdge = this.active.activeEdge + activeEdgeLength;
+                return nextCharInTree(index);
+
             }
         }
-
 
 
         public List<SuffixNode> DFSToPopulateStartIndexAtLeaves()
         {
             List<SuffixNode> leaveNodes = new List<SuffixNode>();
 
-            for (int i = 0; i < root.child.Length; i++)
+            for (int i = 0; i < this.root.child.Length; i++)
             {
-                if (root.child[i] != null)
+                if (this.root.child[i] != null)
                 {
-                    DFSToPopulateStartIndexAtLeaves(root.child[i], 0, leaveNodes);
+                    DFSToPopulateStartIndexAtLeaves(this.root.child[i], 0, leaveNodes);
                 }
             }
 
@@ -302,6 +342,65 @@ namespace test3
                 return nodeLength;
 
             return 0;
+        }
+        //endregion
+
+        //region Longest Common Substring 
+        SuffixNode deepestNode = null;
+        int deepestLength = 0;
+        public string LongestCommonSubstring(int len1)
+        {
+            this.deepestNode = null;
+            this.deepestLength = 0;
+
+            for (int i = 0; i < this.root.child.Length; i++)
+            {
+                if (this.root.child[i] != null)
+                {
+                    LongestCommonSubstring(this.root.child[i], 0, len1);
+                }
+            }
+
+            if (this.deepestNode != null)
+            {
+                return this.str.Substring(deepestNode.end.endIndex - deepestLength + 1, deepestLength);
+            }
+
+            return string.Empty;
+        }
+
+        public void LongestCommonSubstring(SuffixNode node, int length, int len1)
+        {
+            length += node.end.endIndex - node.startIndex + 1;
+
+            bool firstLeaf = false;
+            bool secondLeaf = false;
+            for (int i = 0; i < node.child.Length; i++)
+            {
+                var childNode = node.child[i];
+
+                if (childNode != null)
+                {
+                    if (childNode.startIndex <= len1)
+                    {
+                        firstLeaf = true;
+                    }
+                    else
+                    {
+                        secondLeaf = true;
+                    }
+                    LongestCommonSubstring(childNode, length, len1);
+                }
+            }
+
+            if(firstLeaf && secondLeaf)
+            {
+                if (this.deepestLength < length)
+                {
+                    this.deepestLength = length;
+                    this.deepestNode = node;
+                }
+            }
         }
         //endregion
 
