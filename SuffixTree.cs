@@ -14,14 +14,14 @@ namespace test3
             for (int t = 1; t <= tc; t++)
             {
                 string str1 = Console.ReadLine().Trim();
-                //   string str2 = Console.ReadLine().Trim();
+                string str2 = Console.ReadLine().Trim();
 
                   SuffixTree suffixTree = new SuffixTree();
 
-                input = str1; //+ "#" + str2;
+                input = str1+ "#" + str2;
                 suffixTree.BuildSuffixTree(input);
 
-                var leaves = suffixTree.DFSToPopulateStartIndexAtLeaves();
+            /*    var leaves = suffixTree.DFSToPopulateStartIndexAtLeaves();
 
                 foreach (var leaf in leaves)
                 {
@@ -33,6 +33,7 @@ namespace test3
                 }
 
                 Console.WriteLine("Toal leaves Count: " + (str1.Length + 1)+" | Leaves Printed: "+leaves.Count);
+                */
 
                 string ans = suffixTree.LongestCommonSubstring(str1.Length);
 
@@ -95,76 +96,88 @@ namespace test3
                 }
                 else
                 {
-                    char nextChInTree = nextCharInTree(index);
-
-                    if(nextChInTree=='$') // i.e only a single leaf node is created.
+                    try
                     {
-                        continue;  // As Rule 2 extension happened.
-                    }
+                        char nextChInTree = nextCharInTree(index);
 
-                    SuffixNode activeEdgeNode = active.activeNode.child[this.str[active.activeEdge]];          // current edge in the direction of current char.                                  
+                        SuffixNode activeEdgeNode = active.activeNode.child[this.str[active.activeEdge]];          // current edge in the direction of current char.                                  
 
-                    if (nextChInTree == this.str[index])                                    // If current char matches Next Char after active length. Rule 3 Extension
-                    {
-
-                        // walk down and jump active node if required while increasing active length
-                        int activeEdgeLength = activeEdgeNode.end.endIndex - activeEdgeNode.startIndex + 1;
-
-                        if (active.activeLength >= activeEdgeLength)
+                        if (nextChInTree == this.str[index])                                    // If current char matches Next Char after active length. Rule 3 Extension
                         {
-                            active.activeNode = activeEdgeNode;
-                            active.activeLength = 1;
-                            active.activeEdge = active.activeNode.startIndex + activeEdgeLength;
+
+                            // walk down and jump active node if required while increasing active length
+                            int activeEdgeLength = activeEdgeNode.end.endIndex - activeEdgeNode.startIndex + 1;
+
+                            if (active.activeLength >= activeEdgeLength)
+                            {
+                                active.activeNode = activeEdgeNode;
+                                active.activeLength = 1;
+                                active.activeEdge = active.activeNode.startIndex + activeEdgeLength;
+
+                            }
+                            else
+                            {
+                                ++active.activeLength;
+                            }
+
+                            break;                                                                  // Ends of phase as Rule 3 occurred.
+                        }
+                        else                                                                        // If current char does not match next char after active length. Rule 2 Extension.
+                        {
+                            SuffixNode newInternalNode = new SuffixNode(                                  // Two new leaf nodes will be created and current node will become internal node.
+                                activeEdgeNode.startIndex,
+                                new End(activeEdgeNode.startIndex + active.activeLength - 1),
+                                -1,
+                                this.root);
+
+                            SuffixNode newLeafNode = new SuffixNode(
+                               index,
+                               globalEnd,
+                               -1,
+                               this.root);
+
+                            activeEdgeNode.startIndex = activeEdgeNode.startIndex + active.activeLength;
+
+                            newInternalNode.child[this.str[activeEdgeNode.startIndex]] = activeEdgeNode;
+                            newInternalNode.child[this.str[newLeafNode.startIndex]] = newLeafNode;
+
+                            active.activeNode.child[this.str[newInternalNode.startIndex]] = newInternalNode;
+
+                            --remSuffix;
+
+
+                            if (active.activeNode != this.root)
+                            {
+                                active.activeNode = active.activeNode.suffixLink;
+                            }
+                            else
+                            {
+                                active.activeLength--;
+                                active.activeEdge++;
+                            }
+
+                            if (LastCreatedInternalNode != null)
+                            {
+                                LastCreatedInternalNode.suffixLink = newInternalNode;               // Suffix link pointed to the internal node created in the same phase;
+                            }
+
+                            LastCreatedInternalNode = newInternalNode;
 
                         }
-                        else
-                        {
-                            ++active.activeLength;
-                        }
-
-                        break;                                                                  // Ends of phase as Rule 3 occurred.
                     }
-                    else                                                                        // If current char does not match next char after active length. Rule 2 Extension.
+                    catch(OverflowException)
                     {
-                        SuffixNode newInternalNode = new SuffixNode(                                  // Two new leaf nodes will be created and current node will become internal node.
-                            activeEdgeNode.startIndex,
-                            new End(activeEdgeNode.startIndex + active.activeLength - 1),
-                            -1,
-                            this.root);
+                        SuffixNode activeEdgeNode = this.active.activeNode.child[this.str[this.active.activeEdge]];          // current edge in the direction of current char.                                  
 
-                        SuffixNode newLeafNode = new SuffixNode(
-                           index,
-                           globalEnd,
-                           -1,
-                           this.root);
-
-                        activeEdgeNode.startIndex = activeEdgeNode.startIndex + active.activeLength;
-
-                        newInternalNode.child[this.str[activeEdgeNode.startIndex]] = activeEdgeNode;
-                        newInternalNode.child[this.str[newLeafNode.startIndex]] = newLeafNode;
-
-                        active.activeNode.child[this.str[newInternalNode.startIndex]] = newInternalNode;
-
-                        --remSuffix;
-
+                        activeEdgeNode.child[this.str[index]] = new SuffixNode(index, this.globalEnd, -1, this.root); // Rule 2 extension happens.
 
                         if (active.activeNode != this.root)
                         {
-                            active.activeNode = active.activeNode.suffixLink;
+                            this.active.activeNode = this.active.activeNode.suffixLink;
                         }
-                        else
-                        {
-                            active.activeLength--;
-                            active.activeEdge++;
-                        }
-
-                        if (LastCreatedInternalNode != null)
-                        {
-                            LastCreatedInternalNode.suffixLink = newInternalNode;               // Suffix link pointed to the internal node created in the same phase;
-                        }
-
-                        LastCreatedInternalNode = newInternalNode;
-
+                        this.active.activeEdge++;
+                        this.active.activeLength--;
+                        this.remSuffix--;
                     }
 
                 }
@@ -189,17 +202,7 @@ namespace test3
                 }
                 else
                 {
-                    activeEdgeNode.child[this.str[index]] = new SuffixNode(index, this.globalEnd, -1, this.root); // Rule 2 extension happens.
-
-                    if (active.activeNode != this.root)
-                    {
-                        this.active.activeNode = this.active.activeNode.suffixLink;
-                    }
-                    this.active.activeEdge++;
-                    this.active.activeLength--;
-                    this.remSuffix--;
-                    return '$';
-
+                    throw new OverflowException();
                 }
             }
             else
