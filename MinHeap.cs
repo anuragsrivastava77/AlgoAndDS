@@ -81,7 +81,7 @@ namespace test1
         void BubbleUp(int i)
         {
             int pi;
-            while (true)
+            while (true && i>0)
             {
                 pi = (i - 1) / 2;
                 if (pi < 0)
